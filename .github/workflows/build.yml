@@ -1,0 +1,35 @@
+name: Build APK
+on: [push, workflow_dispatch]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: unzip -q addon_player_pro.zip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Build
+        working-directory: addon_player_pro
+        run: |
+          mkdir -p /tmp/keep
+          cp pubspec.yaml /tmp/keep/
+          cp -r lib /tmp/keep/lib
+          flutter create . --project-name addon_player_pro --org com.addonplayer --platforms=android
+          cp /tmp/keep/pubspec.yaml pubspec.yaml
+          rm -rf lib test
+          cp -r /tmp/keep/lib lib
+          cp android_manifest/AndroidManifest.xml android/app/src/main/AndroidManifest.xml
+          flutter pub get
+          flutter build apk --release
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Addon Player Pro (latest)
+          files: addon_player_pro/build/app/outputs/flutter-apk/app-release.apk
